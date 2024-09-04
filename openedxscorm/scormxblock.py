@@ -506,6 +506,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             return JsonHandlerError(400, e.args[0]).get_response()
 
     def set_value(self, data):
+        logger.info(data)
         name = data.get("name")
         value = data.get("value")
         completion_percent = None
