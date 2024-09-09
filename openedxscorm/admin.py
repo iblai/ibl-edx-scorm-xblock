@@ -5,7 +5,7 @@ from . import models
 
 @admin.register(models.ScormState)
 class ScormStateAdmin(admin.ModelAdmin):
-    list_display = ("id", "user" "course_key", "block_id")
+    list_display = ("id", "user", "course_key", "block_id")
 
 
 @admin.register(models.ScormInteraction)
