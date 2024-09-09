@@ -121,7 +121,7 @@ def update_or_create_interaction(
     interactions: dict[int, list[dict[str, Any]]], scorm_state: ScormState
 ) -> None:
     for index, events in interactions.items():
-        query = {"scorm": scorm_state, "index": index}
+        query = {"scorm_state": scorm_state, "index": index}
         prefix = f"cmi.interactions.{index}"
 
         new_values = {
