@@ -97,7 +97,7 @@ def update_or_create_scorm_state(
 
     query["defaults"] = new_values
     log.debug("ScormState.update_or_create: %s", query)
-    scorm_state, created = ScormState.objects.get_or_create(**query)
+    scorm_state, created = ScormState.objects.update_or_create(**query)
     if created:
         log.info("Created ScormState for %s, %s", user_id, usage_key)
 
