@@ -29,7 +29,7 @@ class ScormState(models.Model):
         max_length=10, default="", choices=CompleteChoices.choices
     )
     lession_score = models.FloatField(blank=True, null=True)
-    session_times = models.JSONField(default=lambda: [])
+    session_times = models.JSONField(default=list)
     timestamp = models.DateTimeField(auto_now=True)
 
 
@@ -51,7 +51,7 @@ class ScormInteraction(models.Model):
     index = models.IntegerField()
     type = models.CharField(max_length=11, default="", choices=TypeChoices.choices)
     student_response = models.CharField(max_length=255, blank=True, null=True)
-    correct_responses = models.JSONField(default=lambda: [])
+    correct_responses = models.JSONField(default=list)
     result = models.CharField(max_length=255, blank=True, null=True)
     weighting = models.FloatField(blank=True, null=True)
     latency = models.DurationField(blank=True, null=True)
