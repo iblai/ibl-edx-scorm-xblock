@@ -21,6 +21,7 @@ from xblock.core import XBlock
 from xblock.completable import CompletableXBlockMixin
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
+from .interactions import update_or_create_scorm_data
 
 try:
     # Older Open edX releases (Redwood and earlier) install a backported version of
@@ -496,17 +497,19 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
 
     @XBlock.json_handler
     def scorm_set_values(self, data_list, _suffix):
+        user_id = self.get_current_user_attr("edx-platform.user_id")
+        update_or_create_scorm_data(user_id=user_id, usage_key=self.scope_ids.usage_id, events=data_list)
         return [self.set_value(data) for data in data_list]
 
     @XBlock.json_handler
     def scorm_set_value(self, data, _suffix):
         try:
+            update_or_create_scorm_data(user_id=user_id, usage_key=self.scope_ids.usage_id, events=[data])
             return self.set_value(data)
         except ValueError as e:
             return JsonHandlerError(400, e.args[0]).get_response()
 
     def set_value(self, data):
-        logger.info(data)
         name = data.get("name")
         value = data.get("value")
         completion_percent = None
