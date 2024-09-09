@@ -95,6 +95,7 @@ def update_or_create_scorm_state(
     if lesson_score is not None:
         new_values["lesson_score"] = lesson_score
 
+    query["defaults"] = new_values
     log.debug("ScormState.update_or_create: %s", query)
     scorm_state, created = ScormState.objects.get_or_create(**query)
     if created:
