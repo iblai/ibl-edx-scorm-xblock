@@ -64,7 +64,7 @@ setup(
     python_requires=">=3.8",
     install_requires=["xblock", "web-fragments"],
     entry_points={
-        "xblock.v1": ["scorm = openedxscorm:ScormXBlock"],
+        "xblock.v1": ["scorm = openedxscorm.scormxblock:ScormXBlock"],
         "cms.djangoapp": [
             "openedxscorm = openedxscorm.apps:IBLOpenedXScormXBlockConfig",
         ],
