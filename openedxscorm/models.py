@@ -57,20 +57,3 @@ class ScormInteraction(models.Model):
     latency = models.DurationField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now=True)
     description = models.CharField(max_length=255)
-
-
-class ScormUserInteraction(models.Model):
-    isSuccess = models.BooleanField(default=False)
-    sessionTime = models.CharField(max_length=255, blank=True, null=True)
-    isComplete = models.BooleanField(default=False)
-    score = models.FloatField(blank=True, null=True)
-    completionPercent = models.FloatField(blank=True, null=True)
-    interactionAnsweredDate = models.DateField(blank=True, null=True)
-    interationLatency = models.IntegerField(blank=True, null=True)
-    interactionUserResponse = models.CharField(max_length=255, blank=True, null=True)
-    interactionCorrectResponse = models.CharField(max_length=255, blank=True, null=True)
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.user.username
