@@ -136,9 +136,10 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     # https://scorm.com/scorm-explained/technical-scorm/run-time/
     scorm_data = Dict(scope=Scope.user_state, default={})
     scorm_s3_path = String(
-    display_name=_("Url to Scorm Index File"), scope=Scope.settings,
+    display_name=_("S3 Root Path"), scope=Scope.settings,
     help=_(
-        "Example : https://ibl-lms-pilot.s3.amazonaws.com/scorm/1b64addaaf3b4d11a9870392ec9b6cce/2c79410ebddaa7047c462ed732c10ec3e910fd4e/index_lms.html")
+        "S3 path to dir containing the imsmanifest.xml file. Example: /some/path/to/root/"
+        ),
     )
 
     icon_class = String(default="video", scope=Scope.settings)
@@ -317,9 +318,19 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         self.weight = parse_float(request.params["weight"], 1)
         self.popup_on_launch = request.params["popup_on_launch"] == "1"
         self.icon_class = "problem" if self.has_score else "video"
+        self.scorm_s3_path = request.params["scorm_s3_path"]
 
         response = {"result": "success", "errors": []}
-        if not hasattr(request.params["file"], "file"):
+
+        if self.scorm_s3_path:
+            self.update_package_fields(
+                os.path.join(self.scorm_s3_path, "imsmanifest.xml")
+            )
+            # FIXME: update the package meta
+            self.package_meta["sha1"] = "temp-test"
+            return self.json_response(response)
+
+        elif not hasattr(request.params["file"], "file"):
             # File not uploaded
             return self.json_response(response)
 
@@ -332,7 +343,8 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         # Extract zip file
         try:
             self.extract_package(package_file)
-            self.update_package_fields()
+            imsmanifest_path = self.find_file_path("imsmanifest.xml")
+            self.update_package_fields(imsmanifest_path)
         except ScormError as e:
             response["errors"].append(e.args[0])
 
@@ -416,6 +428,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     def index_page_url(self):
         if not self.package_meta or not self.index_page_path:
             return ""
+
+        # if we've already specified the scorm root we don't need to use our own
+        if self.scorm_s3_path:
+            return self.storage.url(os.path.join(self.scorm_s3_path, self.index_page_path))
+
         folder = self.extract_folder_path
         if self.storage.exists(
             os.path.join(self.extract_folder_base_path, self.clean_path(self.index_page_path))
@@ -610,11 +627,10 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         self.package_meta["size"] = package_file.seek(0, 2)
         package_file.seek(0)
 
-    def update_package_fields(self):
+    def update_package_fields(self, imsmanifest_path: str):
         """
         Update version and index page path fields.
         """
-        imsmanifest_path = self.find_file_path("imsmanifest.xml")
         imsmanifest_file = self.storage.open(imsmanifest_path)
         tree = ET.parse(imsmanifest_file)
         imsmanifest_file.seek(0)
