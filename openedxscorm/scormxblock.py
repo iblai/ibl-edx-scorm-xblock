@@ -291,12 +291,13 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             "popup_on_launch": self.fields["popup_on_launch"],
             "scorm_xblock": self,
         }
+        js_context = {"is_s3_enabeld": self.is_s3_enabled()}
         studio_context.update(context or {})
         template = self.render_template("static/html/studio.html", studio_context)
         frag = Fragment(template)
         frag.add_css(self.resource_string("static/css/scormxblock.css"))
         frag.add_javascript(self.resource_string("static/js/src/studio.js"))
-        frag.initialize_js("ScormStudioXBlock")
+        frag.initialize_js("ScormStudioXBlock", js_context)
         return frag
 
     @staticmethod
@@ -450,6 +451,9 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         This path needs to depend on the content of the scorm package. Otherwise,
         served media files might become stale when the package is update.
         """
+        if self.scorm_s3_path:
+            return self.scorm_s3_path
+
         return os.path.join(self.extract_folder_base_path, self.package_meta["sha1"])
 
     def clean_path(self, path):
@@ -946,6 +950,9 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             self._storage = storage_func(self)
 
         return self._storage
+
+    def is_s3_enabled(self):
+        return isinstance(self.storage, S3Boto3Storage)
 
     @property
     def xblock_settings(self):

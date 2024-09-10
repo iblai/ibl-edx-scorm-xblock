@@ -11,6 +11,18 @@
             <span class="tip setting-help">{% trans field_display_name.help %}</span>
         </li>
 
+        {% if scorm_xblock.is_s3_enabled %}
+        <li class="field comp-setting-entry is-set">
+            <div class="wrapper-comp-setting">
+                <label class="label setting-label" for="path_or_upload">{% trans "S3 Path or Upload" %}</label>
+                <select name="has_score" id="path_or_upload">
+                    <option value="path" {% if scorm_xblock.scorm_s3_path %}selected{% endif %}>{% trans "Existing S3 Path" %}</option>
+                    <option value="upload" {% if not scorm_xblock.scorm_s3_path %}selected{% endif %}>{% trans "Upload to S3" %}</option>
+                </select>
+            </div>
+            <span class="tip setting-help">{% trans "Choose whether to select content already uploaded to s3 or upload new content" %}</span>
+        </li>
+
         <li class="field comp-setting-entry is-set">
             <div class="wrapper-comp-setting">
                 <label class="label setting-label" for="scorm_s3_path">{% trans field_s3_path.display_name %}</label>
@@ -18,6 +30,7 @@
             </div>
             <span class="tip setting-help">{% trans  field_s3_path.help %}</span>
         </li>
+        {% endif %}
 
         <li class="field comp-setting-entry is-set">
             <div class="wrapper-comp-setting">

@@ -1,4 +1,4 @@
-function ScormStudioXBlock(runtime, element) {
+function ScormStudioXBlock(runtime, element, context) {
   var handlerUrl = runtime.handlerUrl(element, "studio_submit");
 
   $(element)
@@ -21,8 +21,8 @@ function ScormStudioXBlock(runtime, element) {
       var popup_on_launch = $(element)
         .find("select[name=popup_on_launch]")
         .val();
+      
 
-      form_data.append("scorm_s3_path", scorm_s3_path);
       form_data.append("file", file_data);
       form_data.append("display_name", display_name);
       form_data.append("has_score", has_score);
@@ -32,6 +32,14 @@ function ScormStudioXBlock(runtime, element) {
       form_data.append("height", height);
       form_data.append("navigation_menu_width", navigation_menu_width);
       form_data.append("popup_on_launch", popup_on_launch);
+      
+      if (context.is_s3_enabled) {
+        if ($(element).find("#path_or_upload").val() === "path") { 
+          form_data.append("scorm_s3_path", scorm_s3_path);
+          form_data.delete("file")
+        } 
+      }
+
       runtime.notify("save", {
         state: "start",
       });
@@ -70,4 +78,20 @@ function ScormStudioXBlock(runtime, element) {
     .bind("click", function () {
       runtime.notify("cancel", {});
     });
+
+  if (context.is_s3_enabled) {
+    if ($("#path_or_upload").val() === "path") {
+      $("#scorm_file").parent().parent().toggleClass("is-hidden");
+    } else {
+      $("#scorm_s3_path").parent().parent().toggleClass("is-hidden");
+    }
+
+    $(element)
+      .find("#path_or_upload")
+      .on("change", (event) => {
+          $("#scorm_file").parent().parent().toggleClass("is-hidden");
+          $("#scorm_s3_path").parent().parent().toggleClass("is-hidden");
+      });
+  }
 }
+
