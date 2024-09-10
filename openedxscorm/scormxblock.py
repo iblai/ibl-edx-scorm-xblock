@@ -21,7 +21,7 @@ from xblock.core import XBlock
 from xblock.completable import CompletableXBlockMixin
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
-from .interactions import update_or_create_scorm_state()
+from .interactions import update_or_create_scorm_state
 
 
 try:
