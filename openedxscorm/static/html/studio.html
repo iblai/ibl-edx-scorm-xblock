@@ -13,6 +13,14 @@
 
         <li class="field comp-setting-entry is-set">
             <div class="wrapper-comp-setting">
+                <label class="label setting-label" for="scorm_s3_path">{% trans field_s3_path.display_name %}</label>
+                <input class="input setting-input" name="scorm_s3_path" id="scorm_s3_path" value="{{ scorm_xblock.scorm_s3_path }}" type="text"/>
+            </div>
+            <span class="tip setting-help">{% trans  field_s3_path.help %}</span>
+        </li>
+
+        <li class="field comp-setting-entry is-set">
+            <div class="wrapper-comp-setting">
                 <label class="label setting-label" for="scorm_file">{% trans "Upload .zip package" %}</label>
                 <input class="input setting-input" name="scorm_file" id="scorm_file" type="file" accept="application/zip" />
             </div>

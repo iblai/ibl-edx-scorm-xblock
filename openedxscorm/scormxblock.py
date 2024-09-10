@@ -135,6 +135,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     # See the Scorm data model:
     # https://scorm.com/scorm-explained/technical-scorm/run-time/
     scorm_data = Dict(scope=Scope.user_state, default={})
+    scorm_s3_path = String(
+    display_name=_("Url to Scorm Index File"), scope=Scope.settings,
+    help=_(
+        "Example : https://ibl-lms-pilot.s3.amazonaws.com/scorm/1b64addaaf3b4d11a9870392ec9b6cce/2c79410ebddaa7047c462ed732c10ec3e910fd4e/index_lms.html")
+    )
 
     icon_class = String(default="video", scope=Scope.settings)
     width = Integer(
@@ -278,6 +283,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             "field_weight": self.fields["weight"],
             "field_width": self.fields["width"],
             "field_height": self.fields["height"],
+            "field_s3_path": self.fields["scorm_s3_path"],
             "field_popup_on_launch": self.fields["popup_on_launch"],
             "field_enable_navigation_menu": self.fields["enable_navigation_menu"],
             "field_navigation_menu_width": self.fields["navigation_menu_width"],
