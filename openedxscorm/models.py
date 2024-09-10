@@ -25,12 +25,15 @@ class ScormState(models.Model):
     success_status = models.CharField(
         max_length=7, default="", choices=SuccessChoices.choices
     )
-    complete_status = models.CharField(
+    completion_status = models.CharField(
         max_length=10, default="", choices=CompleteChoices.choices
     )
-    lession_score = models.FloatField(blank=True, null=True)
+    lesson_score = models.FloatField(blank=True, null=True)
     session_times = models.JSONField(default=list)
     timestamp = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.block_id}"
 
 
 class ScormInteraction(models.Model):
@@ -57,3 +60,6 @@ class ScormInteraction(models.Model):
     latency = models.DurationField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now=True)
     description = models.CharField(max_length=255)
+
+    class Meta:
+        unique_together = ["scorm_state", "interaction_id", "index"]
