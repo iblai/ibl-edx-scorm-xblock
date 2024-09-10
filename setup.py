@@ -1,6 +1,7 @@
 import io
 import os
 import re
+
 from setuptools import setup
 
 
@@ -9,16 +10,18 @@ def get_version(*file_paths):
     Extract the version string from the file at the given relative path fragments.
     """
     filename = os.path.join(os.path.dirname(__file__), *file_paths)
-    with open(filename, encoding='utf-8') as opened_file:
+    with open(filename, encoding="utf-8") as opened_file:
         version_file = opened_file.read()
-        version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
-                                  version_file, re.M)
+        version_match = re.search(
+            r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M
+        )
     if version_match:
         return version_match.group(1)
-    raise RuntimeError('Unable to find version string.')
+    raise RuntimeError("Unable to find version string.")
 
 
 VERSION = get_version("openedxscorm", "__about__.py")
+
 
 def package_data(pkg, roots):
     """Generic function to find package_data.
@@ -60,7 +63,15 @@ setup(
     packages=["openedxscorm"],
     python_requires=">=3.8",
     install_requires=["xblock", "web-fragments"],
-    entry_points={"xblock.v1": ["scorm = openedxscorm:ScormXBlock"]},
+    entry_points={
+        "xblock.v1": ["scorm = openedxscorm.scormxblock:ScormXBlock"],
+        "cms.djangoapp": [
+            "openedxscorm = openedxscorm.apps:IBLOpenedXScormXBlockConfig",
+        ],
+        "lms.djangoapp": [
+            "openedxscorm = openedxscorm.apps:IBLOpenedXScormXBlockConfig",
+        ],
+    },
     package_data=package_data("openedxscorm", ["static", "public", "locale"]),
     license="AGPLv3",
     classifiers=["License :: OSI Approved :: GNU Affero General Public License v3"],
