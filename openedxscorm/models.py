@@ -1,3 +1,5 @@
+from os import walk
+
 from django.contrib.auth.models import User
 from django.db import models
 from opaque_keys.edx.django.models import CourseKeyField
@@ -17,16 +19,19 @@ class ScormState(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     course_key = CourseKeyField(
         max_length=255,
-        unique=True,
         help_text="example: course-v1:Org+Course+Run",
     )
-    block_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    block_id = models.CharField(max_length=255, blank=True, null=True)
 
     success_status = models.CharField(
-        max_length=7, default="", choices=SuccessChoices.choices
+        max_length=7,
+        choices=SuccessChoices.choices,
+        default=SuccessChoices.UNKNOWN,
     )
     completion_status = models.CharField(
-        max_length=10, default="", choices=CompleteChoices.choices
+        max_length=10,
+        default=CompleteChoices.UNKNOWN,
+        choices=CompleteChoices.choices,
     )
     lesson_score = models.FloatField(blank=True, null=True)
     session_times = models.JSONField(default=list)
@@ -34,6 +39,9 @@ class ScormState(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.block_id}"
+
+    class Meta:
+        unique_together = ["user", "course_key", "block_id"]
 
 
 class ScormInteraction(models.Model):
