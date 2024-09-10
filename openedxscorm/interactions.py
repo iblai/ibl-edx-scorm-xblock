@@ -74,7 +74,7 @@ def update_or_create_scorm_state(
         if name == "cmi.core.lesson_status":
             lesson_status = value
             if lesson_status in ["passed", "failed"]:
-                new_values["lesson_status"] = lesson_status
+                new_values["success_status"] = lesson_status
             elif lesson_status in ["completed", "incomplete"]:
                 new_values["completion_status"] = lesson_status
         # Scorm 2004 use success_status and completion_status
