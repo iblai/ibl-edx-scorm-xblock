@@ -23,6 +23,7 @@ from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
 from .interactions import update_or_create_scorm_state
 
+from storages.backends.s3boto3 import S3Boto3Storage
 
 try:
     # Older Open edX releases (Redwood and earlier) install a backported version of
@@ -291,7 +292,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             "popup_on_launch": self.fields["popup_on_launch"],
             "scorm_xblock": self,
         }
-        js_context = {"is_s3_enabeld": self.is_s3_enabled()}
+        js_context = {"is_s3_enabled": self.is_s3_enabled()}
         studio_context.update(context or {})
         template = self.render_template("static/html/studio.html", studio_context)
         frag = Fragment(template)
