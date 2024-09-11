@@ -66,6 +66,7 @@ def update_or_create_scorm_state(
     score_max = None
     score_raw = None
     score_scaled = None
+    session_times = []
     for event in events:
         name = event["name"]
         value = event["value"]
@@ -82,14 +83,18 @@ def update_or_create_scorm_state(
             new_values["success_status"] = value
         elif name == "cmi.completion_status":
             new_values["completion_status"] = value
-        elif event["name"] == "cmi.score.scaled":
+        elif name == "cmi.score.scaled":
             score_scaled = value
-        elif event["name"] == ["cmi.score.min", "cmi.core.score.min"]:
+        elif name == ["cmi.score.min", "cmi.core.score.min"]:
             score_min = value
-        elif event["name"] == ["cmi.score.max", "cmi.core.score.max"]:
+        elif name == ["cmi.score.max", "cmi.core.score.max"]:
             score_max = value
-        elif event["name"] == ["cmi.score.raw", "cmi.core.score.raw"]:
+        elif name == ["cmi.score.raw", "cmi.core.score.raw"]:
             score_raw = value
+        elif name in ["cmi.session_time", "cmi.core.session_time"]:
+            session_sec = get_session_seconds(name, value)
+            if session_sec is not None:
+                session_times.append(session_sec)
 
     lesson_score = get_lesson_score(score_scaled, score_raw, score_min, score_max)
     if lesson_score is not None:
@@ -100,6 +105,10 @@ def update_or_create_scorm_state(
     scorm_state, created = ScormState.objects.update_or_create(**query)
     if created:
         log.info("Created ScormState for %s, %s", user_id, usage_key)
+    
+    if session_times:
+        scorm_state.session_times.extend(session_times)
+        scorm_state.save()
 
     return scorm_state
 
@@ -116,6 +125,19 @@ def get_lesson_score(
     elif score_raw is not None and score_min is not None and score_max is not None:
         return score_raw / (score_max - score_min)
     return None
+
+
+def get_session_seconds(name:str, value: str | float) -> float | None:
+    """Return the session time in seconds or None if not found"""
+    # Scorm 1.1/1.2
+    if name == "cmi.core.session_time":
+        duration = parse_duration(value)
+        return None if duration is None else duration.total_seconds()
+    # Scorm 2004
+    elif name == "cmi.session_time":
+        return float(value)
+    else:
+        return None
 
 
 def update_or_create_interaction(
