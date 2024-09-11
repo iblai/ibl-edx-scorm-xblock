@@ -324,29 +324,32 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
 
         response = {"result": "success", "errors": []}
 
-        if self.scorm_s3_path:
-            self.update_package_fields(
-                os.path.join(self.scorm_s3_path, "imsmanifest.xml")
-            )
-            # FIXME: update the package meta
-            self.package_meta["sha1"] = "temp-test"
-            return self.json_response(response)
-
-        elif not hasattr(request.params["file"], "file"):
-            # File not uploaded
-            return self.json_response(response)
-
-        package_file = request.params["file"].file
-        self.update_package_meta(package_file)
-
-        # Clean storage folder, if it already exists
-        self.clean_storage()
-
-        # Extract zip file
         try:
+            if self.scorm_s3_path:
+                self.update_package_fields(
+                    os.path.join(self.scorm_s3_path, "imsmanifest.xml")
+                )
+                # NOTE: package_meta just can't be empty, but we don't have any relevenat
+                # information for it
+                self.package_meta = {"temp": "temp"}
+                return self.json_response(response)
+
+            elif not hasattr(request.params["file"], "file"):
+                # File not uploaded
+                response["errors"].append("No file uploaded")
+                return self.json_response(response)
+
+            package_file = request.params["file"].file
+            self.update_package_meta(package_file)
+
+            # Clean storage folder, if it already exists
+            self.clean_storage()
+
+            # Extract zip file
             self.extract_package(package_file)
             imsmanifest_path = self.find_file_path("imsmanifest.xml")
             self.update_package_fields(imsmanifest_path)
+
         except ScormError as e:
             response["errors"].append(e.args[0])
 
@@ -636,7 +639,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         """
         Update version and index page path fields.
         """
-        imsmanifest_file = self.storage.open(imsmanifest_path)
+        try:
+            imsmanifest_file = self.storage.open(imsmanifest_path)
+        except OSError as e:
+            raise ScormError(e)
+
         tree = ET.parse(imsmanifest_file)
         imsmanifest_file.seek(0)
         namespace = ""
