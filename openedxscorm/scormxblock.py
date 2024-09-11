@@ -217,7 +217,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         context = context or {}
         if not self.index_page_path:
             context["message"] = "Click 'Edit' to modify this module and upload a new SCORM package."
-        context["can_view_student_reports"] = True
+        context["can_view_student_reports"] = False
         return self.student_view(context=context)
 
     def student_view(self, context=None):
@@ -237,7 +237,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         frag.add_css(self.resource_string("static/css/scormxblock.css"))
         frag.add_javascript(self.resource_string("static/js/src/scorm.js"))
         frag.add_javascript(self.resource_string("static/js/src/scormxblock.js"))
-        frag.add_javascript(self.resource_string("static/js/vendor/renderjson.js"))
+        # NOTE: renderjson seems to be breaking the CMS unit navigation and runtime doesn't have
+        # user_if_staff so it always returns False anyway so we won't include it here
+        # Not clear is this works as expected in newer versions of edx
+        if context["can_view_student_reports"]:
+            frag.add_javascript(self.resource_string("static/js/vendor/renderjson.js"))
         frag.initialize_js(
             "ScormXBlock",
             json_args={
