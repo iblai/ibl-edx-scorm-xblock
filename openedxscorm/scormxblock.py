@@ -324,22 +324,21 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
 
         response = {"result": "success", "errors": []}
 
-        self.package_meta = {}
         try:
             if self.scorm_s3_path:
                 self.update_package_fields(
                     os.path.join(self.scorm_s3_path, "imsmanifest.xml")
                 )
-                # NOTE: package_meta  can't be empty, but we don't have any relevenat
+                # NOTE: package_meta  can't be empty, but we don't have any relevant
                 # information for it
-                self.package_meta = {"temp": "temp"}
+                self.package_meta = {"s3_path_set": True}
                 return self.json_response(response)
 
             elif not hasattr(request.params["file"], "file"):
                 # File not uploaded
-                response["errors"].append("No file uploaded")
                 return self.json_response(response)
 
+            self.package_meta = {}
             package_file = request.params["file"].file
             self.update_package_meta(package_file)
 
