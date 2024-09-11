@@ -324,12 +324,13 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
 
         response = {"result": "success", "errors": []}
 
+        self.package_meta = {}
         try:
             if self.scorm_s3_path:
                 self.update_package_fields(
                     os.path.join(self.scorm_s3_path, "imsmanifest.xml")
                 )
-                # NOTE: package_meta just can't be empty, but we don't have any relevenat
+                # NOTE: package_meta  can't be empty, but we don't have any relevenat
                 # information for it
                 self.package_meta = {"temp": "temp"}
                 return self.json_response(response)
@@ -351,7 +352,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             self.update_package_fields(imsmanifest_path)
 
         except ScormError as e:
-            response["errors"].append(e.args[0])
+            response["errors"].append(str(e))
 
         return self.json_response(response)
 
