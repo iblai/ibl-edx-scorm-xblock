@@ -320,18 +320,19 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         self.weight = parse_float(request.params["weight"], 1)
         self.popup_on_launch = request.params["popup_on_launch"] == "1"
         self.icon_class = "problem" if self.has_score else "video"
-        self.scorm_s3_path = request.params["scorm_s3_path"]
+        scorm_s3_path = request.params["scorm_s3_path"]
 
         response = {"result": "success", "errors": []}
 
         try:
-            if self.scorm_s3_path:
+            if request.params["scorm_s3_path"]:
                 self.update_package_fields(
-                    os.path.join(self.scorm_s3_path, "imsmanifest.xml")
+                    os.path.join(scorm_s3_path, "imsmanifest.xml")
                 )
                 # NOTE: package_meta  can't be empty, but we don't have any relevant
                 # information for it
                 self.package_meta = {"s3_path_set": True}
+                self.scorm_s3_path = scorm_s3_path
                 return self.json_response(response)
 
             elif not hasattr(request.params["file"], "file"):
