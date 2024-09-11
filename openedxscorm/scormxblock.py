@@ -138,6 +138,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     scorm_data = Dict(scope=Scope.user_state, default={})
     scorm_s3_path = String(
     display_name=_("S3 Root Path"), scope=Scope.settings,
+    default="",
     help=_(
         "S3 path to dir containing the imsmanifest.xml file. Example: /some/path/to/root/"
         ),
