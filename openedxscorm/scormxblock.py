@@ -271,8 +271,12 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         if request.query_string:
             signed_url = "&".join([signed_url, request.query_string])
         file_type, _ = mimetypes.guess_type(file_name)
-        with urllib.request.urlopen(signed_url) as response:
-            file_content = response.read()
+        try:
+            with urllib.request.urlopen(signed_url) as response:
+                file_content = response.read()
+        except urllib.error.HTTPError as e:
+            logger.warning("Error fetching %s: %s", file_name, e)
+            return Response(status=e.code)
 
         return Response(file_content, content_type=file_type)
 
@@ -320,19 +324,19 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         self.weight = parse_float(request.params["weight"], 1)
         self.popup_on_launch = request.params["popup_on_launch"] == "1"
         self.icon_class = "problem" if self.has_score else "video"
-        scorm_s3_path = request.params["scorm_s3_path"]
+        old_s3_scorm_path = self.scorm_s3_path
+        self.scorm_s3_path = request.params["scorm_s3_path"]
 
         response = {"result": "success", "errors": []}
 
         try:
-            if request.params["scorm_s3_path"]:
+            if self.scorm_s3_path:
                 self.update_package_fields(
-                    os.path.join(scorm_s3_path, "imsmanifest.xml")
+                    os.path.join(self.scorm_s3_path, "imsmanifest.xml")
                 )
                 # NOTE: package_meta  can't be empty, but we don't have any relevant
                 # information for it
                 self.package_meta = {"s3_path_set": True}
-                self.scorm_s3_path = scorm_s3_path
                 return self.json_response(response)
 
             elif not hasattr(request.params["file"], "file"):
@@ -352,6 +356,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             self.update_package_fields(imsmanifest_path)
 
         except ScormError as e:
+            self.scorm_s3_path = old_s3_scorm_path
             response["errors"].append(str(e))
 
         return self.json_response(response)
