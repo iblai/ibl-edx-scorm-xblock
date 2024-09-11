@@ -36,8 +36,10 @@ function ScormStudioXBlock(runtime, element, context) {
       if (context.is_s3_enabled) {
         if ($(element).find("#path_or_upload").val() === "path") { 
           form_data.append("scorm_s3_path", scorm_s3_path);
-          form_data.delete("file")
-        } 
+          form_data.set("file", null);
+        } else {
+          form_data.append("scorm_s3_path", "");
+        }
       }
 
       runtime.notify("save", {
