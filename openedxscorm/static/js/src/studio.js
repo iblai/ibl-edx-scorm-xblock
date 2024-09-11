@@ -32,14 +32,14 @@ function ScormStudioXBlock(runtime, element, context) {
       form_data.append("height", height);
       form_data.append("navigation_menu_width", navigation_menu_width);
       form_data.append("popup_on_launch", popup_on_launch);
+      form_data.append("scorm_s3_path", "");
+
       
       if (context.is_s3_enabled) {
         if ($(element).find("#path_or_upload").val() === "path") { 
-          form_data.append("scorm_s3_path", scorm_s3_path);
+          form_data.set("scorm_s3_path", scorm_s3_path);
           form_data.set("file", null);
-        } else {
-          form_data.append("scorm_s3_path", "");
-        }
+        } 
       }
 
       runtime.notify("save", {
