@@ -15,7 +15,7 @@
         <li class="field comp-setting-entry is-set">
             <div class="wrapper-comp-setting">
                 <label class="label setting-label" for="path_or_upload">{% trans "S3 Path or Upload" %}</label>
-                <select name="has_score" id="path_or_upload">
+                <select name="path_or_upload" id="path_or_upload">
                     <option value="path" {% if scorm_xblock.scorm_s3_path %}selected{% endif %}>{% trans "Existing S3 Path" %}</option>
                     <option value="upload" {% if not scorm_xblock.scorm_s3_path %}selected{% endif %}>{% trans "Upload to S3" %}</option>
                 </select>
