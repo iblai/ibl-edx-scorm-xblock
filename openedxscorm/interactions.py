@@ -169,7 +169,7 @@ def update_or_create_interaction(
             value = event["value"]
 
             if name == f"{prefix}.id":
-                query["interaction_id"] = value
+                new_values["interaction_id"] = value
             elif name == f"{prefix}.student_response":
                 new_values["student_response"] = value
             elif name == f"{prefix}.type":
