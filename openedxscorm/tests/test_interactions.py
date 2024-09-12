@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from unittest.mock import patch
 
@@ -7,11 +8,13 @@ from opaque_keys.edx.keys import UsageKey
 
 from openedxscorm.interactions import (
     can_record_analytics,
+    get_correct_response_patterns,
     get_lesson_score,
     split_out_interactions,
+    update_or_create_interaction,
     update_or_create_scorm_state,
 )
-from openedxscorm.models import ScormState
+from openedxscorm.models import ScormInteraction, ScormState
 
 from . import factories
 
@@ -121,22 +124,16 @@ class TestUpdateOrCreateScormState:
         """
         Test that an existing ScormState is updated when one exists for the user and usage_key.
         """
-        user = UserFactory()
-        user_id = user.id
-        usage_key = UsageKey.from_string(
-            "block-v1:TestX+T101+2024_T1+type@scorm+block@block123"
-        )
 
         # Pre-create a ScormState in the databese
         scorm_state = factories.ScormStateFactory(
-            user_id=user_id,
-            course_key=usage_key.course_key,
-            usage_key=usage_key,
             success_status=ScormState.SuccessChoices.FAILED,
             completion_status=ScormState.CompleteChoices.COMPLETED,
             lesson_score=0.25,
             session_times=[600],  # 10 minutes in seconds
         )
+        user_id = scorm_state.user.id
+        usage_key = scorm_state.usage_key
 
         # New events to update the existing ScormState
         events = [
@@ -228,47 +225,96 @@ class TestUpdateOrCreateScormState:
         assert not scorm_state.session_times  # Should be empty list
 
 
+@pytest.mark.django_db
+class TestUpdateOrCreateInteraction:
+    def test_create_interaction(self):
+        """Test that a new interaction is created successfully in the database."""
+        scorm_state = factories.ScormStateFactory()
+        interactions = {
+            0: [
+                {"name": "cmi.interactions.0.id", "value": "interaction_1"},
+                {"name": "cmi.interactions.0.student_response", "value": "response_1"},
+                {"name": "cmi.interactions.0.type", "value": "true-false"},
+                {"name": "cmi.interactions.0.result", "value": "correct"},
+                {"name": "cmi.interactions.0.weighting", "value": "1.0"},
+            ]
+        }
+
+        update_or_create_interaction(interactions, scorm_state)
+
+        interaction = ScormInteraction.objects.get(scorm_state=scorm_state, index=0)
+        assert interaction.interaction_id == "interaction_1"
+        assert interaction.student_response == "response_1"
+        assert interaction.type == ScormInteraction.TypeChoices.TRUE_FALSE
+        assert interaction.result == "correct"
+        assert interaction.weighting == 1.0
+
+    def test_update_existing_interaction(self):
+        """Test that an existing interaction is updated in the database."""
+        scorm_state = factories.ScormStateFactory()
+        interaction = ScormInteraction.objects.create(
+            scorm_state=scorm_state, index=0, interaction_id="interaction_1"
+        )
+        interactions = {
+            0: [
+                {"name": "cmi.interactions.0.id", "value": "interaction_1"},
+                {
+                    "name": "cmi.interactions.0.student_response",
+                    "value": "updated_response",
+                },
+                {"name": "cmi.interactions.0.type", "value": "choice"},
+                {"name": "cmi.interactions.0.result", "value": "incorrect"},
+            ]
+        }
+
+        update_or_create_interaction(interactions, scorm_state)
+
+        interaction.refresh_from_db()
+        assert interaction.student_response == "updated_response"
+        assert interaction.type == "choice"
+        assert interaction.result == "incorrect"
+
+    def test_invalid_latency(self, caplog):
+        """Test that an invalid latency value is logged as a warning."""
+        scorm_state = factories.ScormStateFactory()
+        interactions = {
+            0: [{"name": "cmi.interactions.0.latency", "value": "invalid_duration"}]
+        }
+
+        with caplog.at_level(logging.WARNING):
+            update_or_create_interaction(interactions, scorm_state)
+
+        assert "Invalid Latency" in caplog.text
+        interaction = ScormInteraction.objects.get(scorm_state=scorm_state, index=0)
+        assert interaction.latency is None
+
+
 class TestGetLessonScore:
     def test_with_scaled_score(self):
         """Test case where score_scaled is provided."""
         score = get_lesson_score(
-            score_scaled="0.8", score_raw=None, score_min=None, score_max=None
+            score_scaled=0.8, score_raw=None, score_min=None, score_max=None
         )
         assert score == 0.8
 
     def test_with_raw_min_max(self):
         """Test case where score_raw, score_min, and score_max are provided."""
         score = get_lesson_score(
-            score_scaled=None, score_raw="80", score_min="0", score_max="100"
+            score_scaled=None, score_raw=80, score_min=0, score_max=100
         )
         assert score == 0.8
 
-    def test_with_missing_min_max(self):
-        """Test case where score_raw is provided but score_min or score_max is missing."""
-        score = get_lesson_score(
-            score_scaled=None, score_raw="80", score_min="0", score_max=None
-        )
-        assert score is None
-
-    def test_with_invalid_scaled_value(self):
-        """Test case where score_scaled is an invalid (non-numeric) string."""
-        score = get_lesson_score(
-            score_scaled="invalid", score_raw=None, score_min=None, score_max=None
-        )
-        assert score is None
-
-    def test_with_invalid_raw_value(self):
-        """Test case where score_raw is an invalid (non-numeric) string."""
-        score = get_lesson_score(
-            score_scaled=None, score_raw="invalid", score_min="0", score_max="100"
-        )
-        assert score is None
-
-    def test_with_invalid_min_max_values(self):
-        """Test case where score_min or score_max are invalid (non-numeric) strings."""
-        score = get_lesson_score(
-            score_scaled=None, score_raw="80", score_min="invalid", score_max="100"
-        )
+    @pytest.mark.parametrize("param", ("score_raw", "score_min", "score_max"))
+    def test_with_missing_min_max(self, param):
+        """Test case where one of score_raw, min, max is None"""
+        kwargs = {
+            "score_scaled": None,
+            "score_raw": 80,
+            "score_min": 0,
+            "score_max": 100,
+        }
+        kwargs[param] = None
+        score = get_lesson_score(**kwargs)
         assert score is None
 
     def test_with_no_values(self):
@@ -277,3 +323,37 @@ class TestGetLessonScore:
             score_scaled=None, score_raw=None, score_min=None, score_max=None
         )
         assert score is None
+
+
+class TestGetCorrectResponsePatterns:
+    def test_single_correct_response(self):
+        """Test correct response pattern extraction with a single correct response."""
+        events = [
+            {"cmi.interactions.0.correct_responses.0.pattern": "response_1"},
+        ]
+        correct_responses = get_correct_response_patterns("cmi.interactions.0", events)
+        assert correct_responses == ["response_1"]
+
+    def test_multiple_correct_responses(self):
+        """Test correct response pattern extraction with multiple responses in the correct order."""
+        events = [
+            {"cmi.interactions.0.correct_responses.0.pattern": "response_1"},
+            {"cmi.interactions.0.correct_responses.1.pattern": "response_2"},
+        ]
+        correct_responses = get_correct_response_patterns("cmi.interactions.0", events)
+        assert correct_responses == ["response_1", "response_2"]
+
+    def test_unordered_correct_responses(self):
+        """Test correct response patterns when responses are provided out of order."""
+        events = [
+            {"cmi.interactions.0.correct_responses.1.pattern": "response_2"},
+            {"cmi.interactions.0.correct_responses.0.pattern": "response_1"},
+        ]
+        correct_responses = get_correct_response_patterns("cmi.interactions.0", events)
+        assert correct_responses == ["response_1", "response_2"]
+
+    def test_no_correct_responses(self):
+        """Test when no correct responses are found in the events."""
+        events = [{"cmi.interactions.0.student_response": "student_response_value"}]
+        correct_responses = get_correct_response_patterns("cmi.interactions.0", events)
+        assert correct_responses == []
