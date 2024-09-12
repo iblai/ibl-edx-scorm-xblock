@@ -157,7 +157,7 @@ You may need to set other global s3 values expected by ``s3boto`` such as:
 
 * ``AWS_S3_ACCESS_KEY_ID``
 * ``AWS_S3_SECRET_ACCESS_KEY``
-* ``AWS_S3_SECRET_REGION_NAME``
+* ``AWS_S3_REGION_NAME``
 
 Development
 -----------
