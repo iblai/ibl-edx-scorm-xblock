@@ -73,4 +73,4 @@ class ScormInteraction(models.Model):
     description = models.CharField(max_length=255)
 
     class Meta:
-        unique_together = ["scorm_state", "interaction_id", "index"]
+        unique_together = ["scorm_state", "index"]
