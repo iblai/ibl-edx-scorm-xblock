@@ -132,14 +132,11 @@ def get_lesson_score(
     score_max: float | None,
 ) -> float | None:
     """Return score based on how it was returned by the SCO"""
-    try:
-        if score_scaled is not None:
-            return score_scaled
-        elif score_raw is not None and score_min is not None and score_max is not None:
-            return score_raw / (score_max - score_min)
-        return None
-    except ValueError as e:
-        log.error("Error getting lesson score: %s", e)
+    if score_scaled is not None:
+        return score_scaled
+    elif score_raw is not None and score_min is not None and score_max is not None:
+        return score_raw / (score_max - score_min)
+    return None
 
 
 def get_session_seconds(value: str | float) -> float | None:
