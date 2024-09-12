@@ -93,9 +93,11 @@ def test_split_out_interactions_no_interactions():
 
 @pytest.mark.django_db
 class TestUpdateOrCreateScormState:
-    def test_create_new_state(self):
+    def test_create_new_state_1p2(self):
         """
         Test that a new ScormState is created when none exists for the given user and usage_key.
+
+        Tests Scorm 1.2
         """
         user = UserFactory()
         user_id = user.id
@@ -118,6 +120,41 @@ class TestUpdateOrCreateScormState:
         assert scorm_state.completion_status == "completed"
         assert scorm_state.lesson_score == 0.5
         assert scorm_state.session_times == [3600]  # 1 hour in seconds
+        assert ScormState.objects.count() == 1
+
+    def test_create_new_state_2004(self):
+        """
+        Test that a new ScormState is created when none exists for the given user and usage_key.
+
+        Tests Scorm 2004
+        """
+        user = UserFactory()
+        user_id = user.id
+        usage_key = UsageKey.from_string(
+            "block-v1:TestX+T101+2024_T1+type@scorm+block@block123"
+        )
+        events = [
+            {
+                "name": "cmi.success_status",
+                "value": ScormState.SuccessChoices.PASSED,
+            },
+            {
+                "name": "cmi.completion_status",
+                "value": ScormState.CompleteChoices.COMPLETED,
+            },
+        ]
+
+        # Act: Call the function to create a new ScormState
+        scorm_state = update_or_create_scorm_state(user_id, usage_key, events)
+
+        # Assert: Ensure the ScormState was created with correct fields
+        assert scorm_state.user_id == user_id
+        assert scorm_state.course_key == usage_key.course_key
+        assert scorm_state.usage_key == usage_key
+        assert scorm_state.success_status == ScormState.SuccessChoices.PASSED
+        assert scorm_state.completion_status == ScormState.CompleteChoices.COMPLETED
+        assert scorm_state.lesson_score is None
+        assert scorm_state.session_times == []
         assert ScormState.objects.count() == 1
 
     def test_scorm_state_created_for_multiple_users(self):
