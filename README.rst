@@ -174,7 +174,7 @@ Troubleshooting
 
 This fork is maintained by IBL via `<https://github.com/iblai/ibl-edx-scorm-xblock>`__. Community support is available from the official `Open edX forum <https://discuss.openedx.org>`__. Do you need help with this plugin? See the `troubleshooting <https://docs.tutor.overhang.io/troubleshooting.html>`__ section from the Tutor documentation.
 
-Contact us @ `<support@iblai.zendesk.com>`__
+Contact us @ support@iblai.zendesk.com
 
 License
 -------
