@@ -45,7 +45,7 @@ with io.open(os.path.join(here, "README.rst"), "rt", encoding="utf8") as f:
     readme = f.read()
 
 setup(
-    name="openedx-scorm-xblock",
+    name="ibl-openedx-scorm-xblock",
     version=VERSION,
     description="Scorm XBlock for Open edX",
     long_description=readme,
