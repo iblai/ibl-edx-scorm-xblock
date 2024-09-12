@@ -72,7 +72,9 @@ setup(
             "openedxscorm = openedxscorm.apps:IBLOpenedXScormXBlockConfig",
         ],
     },
-    package_data=package_data("openedxscorm", ["static", "public", "locale"]),
+    package_data=package_data(
+        "openedxscorm", ["static", "public", "locale", "migrations"]
+    ),
     license="AGPLv3",
     classifiers=["License :: OSI Approved :: GNU Affero General Public License v3"],
 )
