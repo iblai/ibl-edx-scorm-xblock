@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from os import walk
 from typing import Any
 
 from django.conf import settings
@@ -9,6 +10,7 @@ from django.utils.dateparse import parse_duration
 from lms.djangoapps.courseware.access_utils import in_preview_mode
 from opaque_keys.edx.keys import UsageKey
 
+from . import parsing
 from .models import ScormInteraction, ScormState
 
 log = logging.getLogger(__name__)
@@ -94,13 +96,13 @@ def update_or_create_scorm_state(
         elif name == "cmi.completion_status":
             new_values["completion_status"] = value
         elif name == "cmi.score.scaled":
-            score_scaled = value
+            score_scaled = parsing.parse_float(value, None)
         elif name in ["cmi.score.min", "cmi.core.score.min"]:
-            score_min = value
+            score_min = parsing.parse_float(value, None)
         elif name in ["cmi.score.max", "cmi.core.score.max"]:
-            score_max = value
+            score_max = parsing.parse_float(value, None)
         elif name in ["cmi.score.raw", "cmi.core.score.raw"]:
-            score_raw = value
+            score_raw = parsing.parse_float(value, None)
         elif name in ["cmi.session_time", "cmi.core.session_time"]:
             session_sec = get_session_seconds(value)
             if session_sec is not None:
@@ -124,17 +126,17 @@ def update_or_create_scorm_state(
 
 
 def get_lesson_score(
-    score_scaled: str | None,
-    score_raw: str | None,
-    score_min: str | None,
-    score_max: str | None,
+    score_scaled: float | None,
+    score_raw: float | None,
+    score_min: float | None,
+    score_max: float | None,
 ) -> float | None:
     """Return score based on how it was returned by the SCO"""
     try:
         if score_scaled is not None:
-            return float(score_scaled)
+            return score_scaled
         elif score_raw is not None and score_min is not None and score_max is not None:
-            return float(score_raw) / (float(score_max) - float(score_min))
+            return score_raw / (score_max - score_min)
         return None
     except ValueError as e:
         log.error("Error getting lesson score: %s", e)
@@ -179,16 +181,15 @@ def update_or_create_interaction(
             elif name == f"{prefix}.latency" and event.get("value") is not None:
                 new_values["latency"] = parse_duration(value)
                 if new_values["latency"] is None:
-                    log.warning("Invalid Duration: %s", value)
+                    log.warning("Invalid Latency: %s", value)
 
         query["defaults"] = new_values
         log.debug("ScormInteraction.update_or_create: %s", query)
         _, created = ScormInteraction.objects.update_or_create(**query)
         if created:
             log.info(
-                "Created ScormInteraction index=%s, id=%s for ScormState: %s",
+                "Created ScormInteraction index=%s for ScormState: %s",
                 query["index"],
-                query["interaction_id"],
                 scorm_state,
             )
 
@@ -197,13 +198,14 @@ def get_correct_response_patterns(
     prefix: str, events: list[dict[str, Any]]
 ) -> list[str]:
     """Returns correct responses indexed the same as pattern index"""
-    correct_indexes = []
+    indexes = []
     response_pattern_map = {}
     for event in events:
         for name, value in event.items():
             if name.startswith(f"{prefix}.correct_responses"):
-                index = int(name.split(".")[3])
+                index = int(name.split(".")[4])
+                indexes.append(index)
                 response_pattern_map[index] = value
 
-    correct_indexes = sorted(correct_indexes)
-    return [response_pattern_map[idx] for idx in correct_indexes]
+    indexes = sorted(indexes)
+    return [response_pattern_map[idx] for idx in indexes]
