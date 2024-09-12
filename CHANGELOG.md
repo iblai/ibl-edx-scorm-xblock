@@ -16,6 +16,17 @@ instructions, because git commits are used to generate release notes:
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-1.0.0'></a>
+## v1.0.0 (2024-09-12)
+
+- **NOTE**: Beginning fork of [overhangio/openedx-scorm-xblock](https://github.com/overhangio/openedx-scorm-xblock/tree/v18.0.2)
+- [Feature] Allows author to specify an existing s3 path to serve scorm files from instead of uploading the package each time (by @geoff-va)
+- [Feature] Adds `ScormState` and `ScormInteraction` models to track some basic analytics for aggregation and reporting (by @geoff-va)
+  - `ScormInteraction` is not currently enabled but the implementation is there
+- [Bugfix] Removes `renderjson.js` from studio authorview as it was causing unit navigation to randomly fail
+  - This script is used to pretty-print scorm user state for admin's
+  - The user search endpoint returns a 403 if `runtime.user_is_staff` is `False`, but that property does not appear to exist in the studio runtime environment (Olive) so would never work anyway
+
 <a id='changelog-18.0.2'></a>
 ## v18.0.2 (2024-07-01)
 
