@@ -4,12 +4,22 @@ import logging
 from collections import defaultdict
 from typing import Any
 
+from django.conf import settings
 from django.utils.dateparse import parse_duration
 from opaque_keys.edx.keys import UsageKey
+from lms.djangoapps.courseware.access_utils import in_preview_mode
 
 from .models import ScormInteraction, ScormState
 
 log = logging.getLogger(__name__)
+
+
+def can_record_analytics() -> bool:
+    """Return True if we're in a context to record analytics"""
+    if settings.SERVICE_VARIANT == 'cms':
+        return False
+
+    return not in_preview_mode()
 
 
 def update_or_create_scorm_data(

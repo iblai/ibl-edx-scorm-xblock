@@ -21,7 +21,7 @@ from xblock.core import XBlock
 from xblock.completable import CompletableXBlockMixin
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
-from .interactions import update_or_create_scorm_state
+from .interactions import update_or_create_scorm_state, can_record_analytics
 
 from storages.backends.s3boto3 import S3Boto3Storage
 
@@ -240,7 +240,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         # NOTE: renderjson seems to be breaking the CMS unit navigation and runtime doesn't have
         # user_if_staff so it always returns False anyway so we won't include it here
         # Not clear is this works as expected in newer versions of edx
-        if context["can_view_student_reports"]:
+        if student_context["can_view_student_reports"]:
             frag.add_javascript(self.resource_string("static/js/vendor/renderjson.js"))
         frag.initialize_js(
             "ScormXBlock",
@@ -543,15 +543,17 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         # NOTE: we should be using updat_or_create_scorm_data but we're seeing issues
         # with the way scorm data is coming back so we're unable to effectively use 
         # it yet
-        user_id = self.get_current_user_attr("edx-platform.user_id")
-        update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=data_list)
+        if can_record_analytics():
+            user_id = self.get_current_user_attr("edx-platform.user_id")
+            update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=data_list)
         return [self.set_value(data) for data in data_list]
 
     @XBlock.json_handler
     def scorm_set_value(self, data, _suffix):
         try:
-            user_id = self.get_current_user_attr("edx-platform.user_id")
-            update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=[data])
+            if can_record_analytics():
+                user_id = self.get_current_user_attr("edx-platform.user_id")
+                update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=[data])
             return self.set_value(data)
         except ValueError as e:
             return JsonHandlerError(400, e.args[0]).get_response()
