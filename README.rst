@@ -154,6 +154,7 @@ These settings may be added to Tutor by creating a `plugin <https://docs.tutor.o
     
 
 You may need to set other global s3 values expected by ``s3boto`` such as:
+
 * ``AWS_S3_ACCESS_KEY_ID``
 * ``AWS_S3_SECRET_ACCESS_KEY``
 * ``AWS_S3_SECRET_REGION_NAME``
