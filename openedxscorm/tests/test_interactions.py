@@ -7,6 +7,7 @@ from opaque_keys.edx.keys import UsageKey
 
 from openedxscorm.interactions import (
     can_record_analytics,
+    get_lesson_score,
     split_out_interactions,
     update_or_create_scorm_state,
 )
@@ -213,3 +214,54 @@ def test_update_or_create_scorm_state_no_events():
     assert scorm_state.usage_key == usage_key
     assert scorm_state.lesson_score is None
     assert not scorm_state.session_times  # Should be empty list
+
+
+class TestGetLessonScore:
+    def test_with_scaled_score(self):
+        """Test case where score_scaled is provided."""
+        score = get_lesson_score(
+            score_scaled="0.8", score_raw=None, score_min=None, score_max=None
+        )
+        assert score == 0.8
+
+    def test_with_raw_min_max(self):
+        """Test case where score_raw, score_min, and score_max are provided."""
+        score = get_lesson_score(
+            score_scaled=None, score_raw="80", score_min="0", score_max="100"
+        )
+        assert score == 0.8
+
+    def test_with_missing_min_max(self):
+        """Test case where score_raw is provided but score_min or score_max is missing."""
+        score = get_lesson_score(
+            score_scaled=None, score_raw="80", score_min="0", score_max=None
+        )
+        assert score is None
+
+    def test_with_invalid_scaled_value(self):
+        """Test case where score_scaled is an invalid (non-numeric) string."""
+        score = get_lesson_score(
+            score_scaled="invalid", score_raw=None, score_min=None, score_max=None
+        )
+        assert score is None
+
+    def test_with_invalid_raw_value(self):
+        """Test case where score_raw is an invalid (non-numeric) string."""
+        score = get_lesson_score(
+            score_scaled=None, score_raw="invalid", score_min="0", score_max="100"
+        )
+        assert score is None
+
+    def test_with_invalid_min_max_values(self):
+        """Test case where score_min or score_max are invalid (non-numeric) strings."""
+        score = get_lesson_score(
+            score_scaled=None, score_raw="80", score_min="invalid", score_max="100"
+        )
+        assert score is None
+
+    def test_with_no_values(self):
+        """Test case where no scores are provided."""
+        score = get_lesson_score(
+            score_scaled=None, score_raw=None, score_min=None, score_max=None
+        )
+        assert score is None
