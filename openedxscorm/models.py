@@ -2,7 +2,7 @@ from os import walk
 
 from django.contrib.auth.models import User
 from django.db import models
-from opaque_keys.edx.django.models import CourseKeyField
+from opaque_keys.edx.django.models import CourseKeyField, UsageKeyField
 
 
 class ScormState(models.Model):
@@ -21,7 +21,10 @@ class ScormState(models.Model):
         max_length=255,
         help_text="example: course-v1:Org+Course+Run",
     )
-    block_id = models.CharField(max_length=255, blank=True, null=True)
+    usage_key = UsageKeyField(
+        max_length=255,
+        help_text="example: block-v1:Org+Course+Run+type@scorm+block@uuid",
+    )
 
     success_status = models.CharField(
         max_length=7,
@@ -38,10 +41,10 @@ class ScormState(models.Model):
     timestamp = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user} - {self.block_id}"
+        return f"{self.user} - {self.usage_key}"
 
     class Meta:
-        unique_together = ["user", "course_key", "block_id"]
+        unique_together = ["user", "course_key", "usage_key"]
 
 
 class ScormInteraction(models.Model):
