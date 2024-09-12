@@ -21,8 +21,9 @@ from xblock.core import XBlock
 from xblock.completable import CompletableXBlockMixin
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
-from .interactions import update_or_create_scorm_state
+from .interactions import update_or_create_scorm_state, can_record_analytics
 
+from storages.backends.s3boto3 import S3Boto3Storage
 
 try:
     # Older Open edX releases (Redwood and earlier) install a backported version of
@@ -135,6 +136,13 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     # See the Scorm data model:
     # https://scorm.com/scorm-explained/technical-scorm/run-time/
     scorm_data = Dict(scope=Scope.user_state, default={})
+    scorm_s3_path = String(
+    display_name=_("S3 Root Path"), scope=Scope.settings,
+    default="",
+    help=_(
+        "S3 path to dir containing the imsmanifest.xml file. Example: /some/path/to/root/"
+        ),
+    )
 
     icon_class = String(default="video", scope=Scope.settings)
     width = Integer(
@@ -209,7 +217,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         context = context or {}
         if not self.index_page_path:
             context["message"] = "Click 'Edit' to modify this module and upload a new SCORM package."
-        context["can_view_student_reports"] = True
+        context["can_view_student_reports"] = False
         return self.student_view(context=context)
 
     def student_view(self, context=None):
@@ -229,7 +237,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         frag.add_css(self.resource_string("static/css/scormxblock.css"))
         frag.add_javascript(self.resource_string("static/js/src/scorm.js"))
         frag.add_javascript(self.resource_string("static/js/src/scormxblock.js"))
-        frag.add_javascript(self.resource_string("static/js/vendor/renderjson.js"))
+        # NOTE: renderjson seems to be breaking the CMS unit navigation and runtime doesn't have
+        # user_if_staff so it always returns False anyway so we won't include it here
+        # Not clear is this works as expected in newer versions of edx
+        if student_context["can_view_student_reports"]:
+            frag.add_javascript(self.resource_string("static/js/vendor/renderjson.js"))
         frag.initialize_js(
             "ScormXBlock",
             json_args={
@@ -264,8 +276,12 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         if request.query_string:
             signed_url = "&".join([signed_url, request.query_string])
         file_type, _ = mimetypes.guess_type(file_name)
-        with urllib.request.urlopen(signed_url) as response:
-            file_content = response.read()
+        try:
+            with urllib.request.urlopen(signed_url) as response:
+                file_content = response.read()
+        except urllib.error.HTTPError as e:
+            logger.warning("Error fetching %s: %s", file_name, e)
+            return Response(status=e.code)
 
         return Response(file_content, content_type=file_type)
 
@@ -278,18 +294,20 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             "field_weight": self.fields["weight"],
             "field_width": self.fields["width"],
             "field_height": self.fields["height"],
+            "field_s3_path": self.fields["scorm_s3_path"],
             "field_popup_on_launch": self.fields["popup_on_launch"],
             "field_enable_navigation_menu": self.fields["enable_navigation_menu"],
             "field_navigation_menu_width": self.fields["navigation_menu_width"],
             "popup_on_launch": self.fields["popup_on_launch"],
             "scorm_xblock": self,
         }
+        js_context = {"is_s3_enabled": self.is_s3_enabled()}
         studio_context.update(context or {})
         template = self.render_template("static/html/studio.html", studio_context)
         frag = Fragment(template)
         frag.add_css(self.resource_string("static/css/scormxblock.css"))
         frag.add_javascript(self.resource_string("static/js/src/studio.js"))
-        frag.initialize_js("ScormStudioXBlock")
+        frag.initialize_js("ScormStudioXBlock", js_context)
         return frag
 
     @staticmethod
@@ -311,24 +329,40 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         self.weight = parse_float(request.params["weight"], 1)
         self.popup_on_launch = request.params["popup_on_launch"] == "1"
         self.icon_class = "problem" if self.has_score else "video"
+        old_s3_scorm_path = self.scorm_s3_path
+        self.scorm_s3_path = request.params["scorm_s3_path"]
 
         response = {"result": "success", "errors": []}
-        if not hasattr(request.params["file"], "file"):
-            # File not uploaded
-            return self.json_response(response)
 
-        package_file = request.params["file"].file
-        self.update_package_meta(package_file)
-
-        # Clean storage folder, if it already exists
-        self.clean_storage()
-
-        # Extract zip file
         try:
+            if self.scorm_s3_path:
+                self.update_package_fields(
+                    os.path.join(self.scorm_s3_path, "imsmanifest.xml")
+                )
+                # NOTE: package_meta  can't be empty, but we don't have any relevant
+                # information for it
+                self.package_meta = {"s3_path_set": True}
+                return self.json_response(response)
+
+            elif not hasattr(request.params["file"], "file"):
+                # File not uploaded
+                return self.json_response(response)
+
+            self.package_meta = {}
+            package_file = request.params["file"].file
+            self.update_package_meta(package_file)
+
+            # Clean storage folder, if it already exists
+            self.clean_storage()
+
+            # Extract zip file
             self.extract_package(package_file)
-            self.update_package_fields()
+            imsmanifest_path = self.find_file_path("imsmanifest.xml")
+            self.update_package_fields(imsmanifest_path)
+
         except ScormError as e:
-            response["errors"].append(e.args[0])
+            self.scorm_s3_path = old_s3_scorm_path
+            response["errors"].append(str(e))
 
         return self.json_response(response)
 
@@ -410,6 +444,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     def index_page_url(self):
         if not self.package_meta or not self.index_page_path:
             return ""
+
+        # if we've already specified the scorm root we don't need to use our own
+        if self.scorm_s3_path:
+            return self.storage.url(os.path.join(self.scorm_s3_path, self.index_page_path))
+
         folder = self.extract_folder_path
         if self.storage.exists(
             os.path.join(self.extract_folder_base_path, self.clean_path(self.index_page_path))
@@ -427,6 +466,9 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         This path needs to depend on the content of the scorm package. Otherwise,
         served media files might become stale when the package is update.
         """
+        if self.scorm_s3_path:
+            return self.scorm_s3_path
+
         return os.path.join(self.extract_folder_base_path, self.package_meta["sha1"])
 
     def clean_path(self, path):
@@ -501,15 +543,17 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         # NOTE: we should be using updat_or_create_scorm_data but we're seeing issues
         # with the way scorm data is coming back so we're unable to effectively use 
         # it yet
-        user_id = self.get_current_user_attr("edx-platform.user_id")
-        update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=data_list)
+        if can_record_analytics():
+            user_id = self.get_current_user_attr("edx-platform.user_id")
+            update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=data_list)
         return [self.set_value(data) for data in data_list]
 
     @XBlock.json_handler
     def scorm_set_value(self, data, _suffix):
         try:
-            user_id = self.get_current_user_attr("edx-platform.user_id")
-            update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=[data])
+            if can_record_analytics():
+                user_id = self.get_current_user_attr("edx-platform.user_id")
+                update_or_create_scorm_state(user_id=user_id, usage_key=self.scope_ids.usage_id, events=[data])
             return self.set_value(data)
         except ValueError as e:
             return JsonHandlerError(400, e.args[0]).get_response()
@@ -604,12 +648,15 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         self.package_meta["size"] = package_file.seek(0, 2)
         package_file.seek(0)
 
-    def update_package_fields(self):
+    def update_package_fields(self, imsmanifest_path: str):
         """
         Update version and index page path fields.
         """
-        imsmanifest_path = self.find_file_path("imsmanifest.xml")
-        imsmanifest_file = self.storage.open(imsmanifest_path)
+        try:
+            imsmanifest_file = self.storage.open(imsmanifest_path)
+        except OSError as e:
+            raise ScormError(e)
+
         tree = ET.parse(imsmanifest_file)
         imsmanifest_file.seek(0)
         namespace = ""
@@ -924,6 +971,9 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
             self._storage = storage_func(self)
 
         return self._storage
+
+    def is_s3_enabled(self):
+        return isinstance(self.storage, S3Boto3Storage)
 
     @property
     def xblock_settings(self):
