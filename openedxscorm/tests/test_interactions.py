@@ -120,6 +120,36 @@ class TestUpdateOrCreateScormState:
         assert scorm_state.session_times == [3600]  # 1 hour in seconds
         assert ScormState.objects.count() == 1
 
+    def test_scorm_state_created_for_multiple_users(self):
+        """
+        Test scorm state can be created for multiple users for same blocks
+        """
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user1_id = user1.id
+        user2_id = user2.id
+        usage_key = UsageKey.from_string(
+            "block-v1:TestX+T101+2024_T1+type@scorm+block@block123"
+        )
+        events = [
+            {"name": "cmi.core.lesson_status", "value": "completed"},
+            {"name": "cmi.score.scaled", "value": "0.5"},
+            {"name": "cmi.core.session_time", "value": "PT1H0M0S"},  # 1 hour session
+        ]
+
+        # Act: Call the function to create a new ScormState
+        scorm_state1 = update_or_create_scorm_state(user1_id, usage_key, events)
+        scorm_state2 = update_or_create_scorm_state(user2_id, usage_key, events)
+
+        # Assert: Ensure the ScormState was created with correct fields
+        for scorm_state in [scorm_state1, scorm_state2]:
+            assert scorm_state.course_key == usage_key.course_key
+            assert scorm_state.usage_key == usage_key
+            assert scorm_state.completion_status == "completed"
+            assert scorm_state.lesson_score == 0.5
+            assert scorm_state.session_times == [3600]  # 1 hour in seconds
+        assert ScormState.objects.count() == 2
+
     def test_update_existing_state(self):
         """
         Test that an existing ScormState is updated when one exists for the user and usage_key.
@@ -131,6 +161,13 @@ class TestUpdateOrCreateScormState:
             completion_status=ScormState.CompleteChoices.COMPLETED,
             lesson_score=0.25,
             session_times=[600],  # 10 minutes in seconds
+        )
+        # other existing scorm state that won't be updated
+        other = factories.ScormStateFactory(
+            course_key=scorm_state.course_key,
+            usage_key=scorm_state.usage_key,
+            lesson_score=1,
+            session_times=[],
         )
         user_id = scorm_state.user.id
         usage_key = scorm_state.usage_key
@@ -155,6 +192,11 @@ class TestUpdateOrCreateScormState:
         assert updated_scorm_state.success_status == ScormState.SuccessChoices.PASSED
         assert updated_scorm_state.lesson_score == 0.5
         assert updated_scorm_state.session_times == [600, 1800]
+        assert ScormState.objects.count() == 2
+        other.refresh_from_db()
+        assert other.lesson_score == 1
+        assert other.success_status == ScormState.SuccessChoices.UNKNOWN
+        assert not other.session_times
 
     @pytest.mark.django_db
     def test_multiple_events(self):
