@@ -164,10 +164,10 @@ Development
 
 Run unit tests with::
 
-    $ pytest /mnt/openedx-scorm-xblock/openedxscorm/tests.py
+    $ pytest /mnt/openedx-scorm-xblock/openedxscorm/tests/
 
 
-To manage changelogs, please install `scriv <https://scriv.readthedocs.io/en/stable/index.html#>`__.
+To manage changelogs, please install `scriv <https://scriv.readthedocs.io/en/stable/index.html#>`__ and follow the directions in the `CHANGELOG.md`.
 
 Troubleshooting
 ---------------
