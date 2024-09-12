@@ -22,6 +22,7 @@ from xblock.completable import CompletableXBlockMixin
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
 from .interactions import update_or_create_scorm_state, can_record_analytics
+from .parsing import parse_int, parse_float, parse_validate_positive_float
 
 from storages.backends.s3boto3 import S3Boto3Storage
 
@@ -984,32 +985,6 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         if not settings_service:
             return {}
         return settings_service.get_settings_bucket(self)
-
-
-def parse_int(value, default):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def parse_float(value, default):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def parse_validate_positive_float(value, name):
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        raise ValueError(
-            f"Could not parse value of '{name}' (must be float): {value}"
-        )
-    if parsed < 0:
-        raise ValueError(f"Value of '{name}' must not be negative: {value}")
-    return parsed
 
 
 def is_dir(zipinfo):
