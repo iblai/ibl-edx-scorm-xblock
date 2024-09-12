@@ -14,6 +14,7 @@ This XBlock was initially developed by `Raccoon Gang <https://raccoongang.com/>`
 
 This XBlock is not compatible with its `ancestor <https://github.com/raccoongang/edx_xblock_scorm>`__: older xblocks cannot be simply migrated to the newer one. However, this xblock can be installed next to the other one and run on the same platform for easier transition.
 
+
 IBL Features
 ------------
 
@@ -58,6 +59,16 @@ By
 .. code-block:: yaml
 
     X_FRAME_OPTIONS: SAMEORIGIN
+
+
+Migrations
+----------
+Run migrations for the application via:
+
+.. code-block:: shell
+
+   python manage.py lms migrate openedxscorm
+
 
 Usage
 -----
