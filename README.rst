@@ -14,6 +14,14 @@ This XBlock was initially developed by `Raccoon Gang <https://raccoongang.com/>`
 
 This XBlock is not compatible with its `ancestor <https://github.com/raccoongang/edx_xblock_scorm>`__: older xblocks cannot be simply migrated to the newer one. However, this xblock can be installed next to the other one and run on the same platform for easier transition.
 
+IBL Features
+------------
+
+* Allows author to specify an existing s3 path to serve s3 content as opposed to having to upload it each time
+* Adds model to fascillitate reporting and aggregation of scorm events
+  * Overall SCO State it currently enabled; Interactions to come
+
+
 Features
 --------
 
@@ -24,15 +32,20 @@ Features
 * Optional custom width navigation menu interpreted from manifest file
 * Compatibility with `Django storages <https://django-storages.readthedocs.io/>`__, customizable storage backend
 
+
 Installation
 ------------
+Uninstall the existing ``openedx-scorm-xblock`` if installed as this one will occupy the same namespace with a new name
 
-This XBlock was designed to work out of the box with `Tutor <https://docs.tutor.overhang.io>`__ (Ironwood release).
-It comes bundled by default in the official Tutor releases, such that there is no need to install it manually.
+.. code-block:: shell
 
-For non-Tutor platforms, you should install the `Python package from Pypi <https://pypi.org/project/openedx-scorm-xblock/>`__::
+   pip uninstall openedx-scorm-xblock -y
 
-    pip install openedx-scorm-xblock
+Install the new xblock:
+
+.. code-block:: shell
+
+   pip install git+https://github.com/iblai/ibl-edx-scorm-xblock
 
 In the Open edX native installation, you will have to modify the files ``/edx/etc/lms.yml`` and ``/edx/etc/studio.yml``. Replace
 
@@ -138,20 +151,32 @@ These settings may be added to Tutor by creating a `plugin <https://docs.tutor.o
         ...
     }"""
     )
+    
+
+You may need to set other global s3 values expected by ``s3boto`` such as:
+
+* ``AWS_S3_ACCESS_KEY_ID``
+* ``AWS_S3_SECRET_ACCESS_KEY``
+* ``AWS_S3_REGION_NAME``
 
 Development
 -----------
 
 Run unit tests with::
 
-    $ pytest /mnt/openedx-scorm-xblock/openedxscorm/tests.py
+    $ pytest /mnt/openedx-scorm-xblock/openedxscorm/tests/
+
+
+To manage changelogs, please install `scriv <https://scriv.readthedocs.io/en/stable/index.html#>`__ and follow the directions in the ``CHANGELOG.md``.
 
 Troubleshooting
 ---------------
 
-This XBlock is maintained by Zia Fazal from `Edly <https://edly.io>`__. Community support is available from the official `Open edX forum <https://discuss.openedx.org>`__. Do you need help with this plugin? See the `troubleshooting <https://docs.tutor.overhang.io/troubleshooting.html>`__ section from the Tutor documentation.
+This fork is maintained by IBL via `<https://github.com/iblai/ibl-edx-scorm-xblock>`__. Community support is available from the official `Open edX forum <https://discuss.openedx.org>`__. Do you need help with this plugin? See the `troubleshooting <https://docs.tutor.overhang.io/troubleshooting.html>`__ section from the Tutor documentation.
+
+Contact us @ support@iblai.zendesk.com
 
 License
 -------
 
-This work is licensed under the terms of the `GNU Affero General Public License (AGPL) <https://github.com/overhangio/openedx-scorm-xblock/blob/master/LICENSE.txt>`_.
+This work is licensed under the terms of the `GNU Affero General Public License (AGPL) <https://github.com/iblai/ibl-edx-scorm-xblock/blob/master/LICENSE.txt>`_.
