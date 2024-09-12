@@ -171,7 +171,10 @@ class TestUpdateOrCreateScormState:
         )
 
         events = [
-            {"name": "cmi.core.lesson_status", "value": "completed"},
+            {
+                "name": "cmi.core.lesson_status",
+                "value": ScormState.CompleteChoices.COMPLETED,
+            },
             {"name": "cmi.score.raw", "value": "75"},
             {"name": "cmi.score.min", "value": "50"},
             {"name": "cmi.score.max", "value": "100"},
@@ -192,7 +195,7 @@ class TestUpdateOrCreateScormState:
         assert scorm_state.user_id == user_id
         assert scorm_state.course_key == usage_key.course_key
         assert scorm_state.usage_key == usage_key
-        assert scorm_state.completion_status == "completed"
+        assert scorm_state.completion_status == ScormState.CompleteChoices.COMPLETED
         assert scorm_state.lesson_score == 75 / (100 - 50)
         assert len(scorm_state.session_times) == 2  # Two session times
         assert scorm_state.session_times == [
