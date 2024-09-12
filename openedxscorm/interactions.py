@@ -177,7 +177,7 @@ def update_or_create_interaction(
             elif name == f"{prefix}.result":
                 new_values["result"] = value
             elif name == f"{prefix}.weighting":
-                new_values["weighting"] = value
+                new_values["weighting"] = parsing.parse_float(value, None)
             elif name == f"{prefix}.latency" and event.get("value") is not None:
                 new_values["latency"] = parse_duration(value)
                 if new_values["latency"] is None:
