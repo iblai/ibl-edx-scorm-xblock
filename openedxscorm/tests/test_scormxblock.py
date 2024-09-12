@@ -2,13 +2,12 @@
 import json
 import unittest
 
-
-from ddt import ddt, data
-from freezegun import freeze_time
 import mock
+from ddt import data, ddt
+from freezegun import freeze_time
 from xblock.field_data import DictFieldData
 
-from .scormxblock import ScormXBlock
+from openedxscorm.scormxblock import ScormXBlock
 
 
 @ddt
@@ -142,10 +141,10 @@ class ScormXBlockTests(unittest.TestCase):
         )
 
     @mock.patch(
-        "openedxscorm.ScormXBlock.get_completion_status",
+        "openedxscorm.scormxblock.ScormXBlock.get_completion_status",
         return_value="completion_status",
     )
-    @mock.patch("openedxscorm.ScormXBlock.publish_grade")
+    @mock.patch("openedxscorm.scormxblock.ScormXBlock.publish_grade")
     @data(
         {"name": "cmi.core.lesson_status", "value": "completed"},
         {"name": "cmi.completion_status", "value": "failed"},
