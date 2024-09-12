@@ -93,7 +93,11 @@ def test_split_out_interactions_no_interactions():
 
 @pytest.mark.django_db
 class TestUpdateOrCreateScormState:
-    def test_create_new_state_1p2(self):
+    @pytest.mark.parametrize(
+        "status, success, completion",
+        (("completed", "unknown", "completed"), ("failed", "failed", "unknown")),
+    )
+    def test_create_new_state_1p2(self, status, success, completion):
         """
         Test that a new ScormState is created when none exists for the given user and usage_key.
 
@@ -105,7 +109,7 @@ class TestUpdateOrCreateScormState:
             "block-v1:TestX+T101+2024_T1+type@scorm+block@block123"
         )
         events = [
-            {"name": "cmi.core.lesson_status", "value": "completed"},
+            {"name": "cmi.core.lesson_status", "value": status},
             {"name": "cmi.score.scaled", "value": "0.5"},
             {"name": "cmi.core.session_time", "value": "PT1H0M0S"},  # 1 hour session
         ]
@@ -117,7 +121,8 @@ class TestUpdateOrCreateScormState:
         assert scorm_state.user_id == user_id
         assert scorm_state.course_key == usage_key.course_key
         assert scorm_state.usage_key == usage_key
-        assert scorm_state.completion_status == "completed"
+        assert scorm_state.completion_status == completion
+        assert scorm_state.success_status == success
         assert scorm_state.lesson_score == 0.5
         assert scorm_state.session_times == [3600]  # 1 hour in seconds
         assert ScormState.objects.count() == 1
