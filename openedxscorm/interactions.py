@@ -6,8 +6,8 @@ from typing import Any
 
 from django.conf import settings
 from django.utils.dateparse import parse_duration
-from opaque_keys.edx.keys import UsageKey
 from lms.djangoapps.courseware.access_utils import in_preview_mode
+from opaque_keys.edx.keys import UsageKey
 
 from .models import ScormInteraction, ScormState
 
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 def can_record_analytics() -> bool:
     """Return True if we're in a context to record analytics"""
-    if settings.SERVICE_VARIANT == 'cms':
+    if settings.SERVICE_VARIANT == "cms":
         return False
 
     return not in_preview_mode()
@@ -68,7 +68,7 @@ def update_or_create_scorm_state(
     query = {
         "user_id": user_id,
         "course_key": usage_key.course_key,
-        "block_id": str(usage_key),
+        "usage_key": str(usage_key),
     }
 
     new_values = {}
@@ -95,14 +95,14 @@ def update_or_create_scorm_state(
             new_values["completion_status"] = value
         elif name == "cmi.score.scaled":
             score_scaled = value
-        elif name == ["cmi.score.min", "cmi.core.score.min"]:
+        elif name in ["cmi.score.min", "cmi.core.score.min"]:
             score_min = value
-        elif name == ["cmi.score.max", "cmi.core.score.max"]:
+        elif name in ["cmi.score.max", "cmi.core.score.max"]:
             score_max = value
-        elif name == ["cmi.score.raw", "cmi.core.score.raw"]:
+        elif name in ["cmi.score.raw", "cmi.core.score.raw"]:
             score_raw = value
         elif name in ["cmi.session_time", "cmi.core.session_time"]:
-            session_sec = get_session_seconds(name, value)
+            session_sec = get_session_seconds(value)
             if session_sec is not None:
                 session_times.append(session_sec)
 
@@ -115,7 +115,7 @@ def update_or_create_scorm_state(
     scorm_state, created = ScormState.objects.update_or_create(**query)
     if created:
         log.info("Created ScormState for %s, %s", user_id, usage_key)
-    
+
     if session_times:
         scorm_state.session_times.extend(session_times)
         scorm_state.save()
@@ -124,30 +124,32 @@ def update_or_create_scorm_state(
 
 
 def get_lesson_score(
-    score_scaled: float | None,
-    score_raw: float | None,
-    score_min: float | None,
-    score_max: float | None,
+    score_scaled: str | None,
+    score_raw: str | None,
+    score_min: str | None,
+    score_max: str | None,
 ) -> float | None:
     """Return score based on how it was returned by the SCO"""
-    if score_scaled is not None:
-        return score_scaled
-    elif score_raw is not None and score_min is not None and score_max is not None:
-        return score_raw / (score_max - score_min)
-    return None
-
-
-def get_session_seconds(name:str, value: str | float) -> float | None:
-    """Return the session time in seconds or None if not found"""
-    # Scorm 1.1/1.2
-    if name == "cmi.core.session_time":
-        duration = parse_duration(value)
-        return None if duration is None else duration.total_seconds()
-    # Scorm 2004
-    elif name == "cmi.session_time":
-        return float(value)
-    else:
+    try:
+        if score_scaled is not None:
+            return float(score_scaled)
+        elif score_raw is not None and score_min is not None and score_max is not None:
+            return float(score_raw) / (float(score_max) - float(score_min))
         return None
+    except ValueError as e:
+        log.error("Error getting lesson score: %s", e)
+
+
+def get_session_seconds(value: str | float) -> float | None:
+    """Return the session time in seconds or None if not found
+
+    It seems duration should either be:
+    - HH:MM:SS style format
+    - PT1H0M0S ISO8601 style
+    """
+
+    duration = parse_duration(value)
+    return None if duration is None else duration.total_seconds()
 
 
 def update_or_create_interaction(
