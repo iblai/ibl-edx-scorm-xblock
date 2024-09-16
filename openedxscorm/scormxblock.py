@@ -145,7 +145,8 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     display_name=_("S3 Root Path"), scope=Scope.settings,
     default="",
     help=_(
-        "S3 path to dir containing the imsmanifest.xml file. Example: /some/path/to/root/"
+        "S3 path to dir containing the imsmanifest.xml file in the configured S3 bucket. "
+        "Example: /some/path/to/root/"
         ),
     )
 
