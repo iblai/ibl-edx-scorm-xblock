@@ -16,6 +16,11 @@ instructions, because git commits are used to generate release notes:
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-1.0.1'></a>
+## v1.0.1 (2024-09-16)
+
+- [Security] Adds authenticated/enrollment check at assets_proxy endpoint
+
 <a id='changelog-1.0.0'></a>
 ## v1.0.0 (2024-09-12)
 

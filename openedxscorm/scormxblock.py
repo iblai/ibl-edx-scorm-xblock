@@ -1,12 +1,15 @@
 import json
 import hashlib
 import os
+import json
 import logging
 import re
 import xml.etree.ElementTree as ET
 import zipfile
 import mimetypes
 import urllib
+
+from django.contrib.auth.models import User
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -21,6 +24,7 @@ from xblock.core import XBlock
 from xblock.completable import CompletableXBlockMixin
 from xblock.exceptions import JsonHandlerError
 from xblock.fields import Scope, String, Float, Boolean, Dict, DateTime, Integer
+
 from .interactions import update_or_create_scorm_state, can_record_analytics
 from .parsing import parse_int, parse_float, parse_validate_positive_float
 
@@ -141,7 +145,8 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     display_name=_("S3 Root Path"), scope=Scope.settings,
     default="",
     help=_(
-        "S3 path to dir containing the imsmanifest.xml file. Example: /some/path/to/root/"
+        "S3 path to dir containing the imsmanifest.xml file in the configured S3 bucket. "
+        "Example: /some/path/to/root/"
         ),
     )
 
@@ -198,6 +203,11 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
 
     def get_current_user(self):
         return self.runtime.service(self, "user").get_current_user()
+
+    def get_django_user(self) -> User:
+        # Don't love using a private accessor but this has been stable forever and no
+        # to perform another request if we it's readily available
+        return self.runtime.service(self, "user")._django_user
 
     def initialize_student_info(self):
         user_id = self.get_current_user_attr("edx-platform.user_id")
@@ -272,6 +282,17 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         -------
         Response object containing the content of the requested file with the appropriate content type.
         """
+        user = self.get_django_user()
+        if not user.is_authenticated:
+            err = {"error": "User must be logged in"}
+            logger.warning("User is not logged in; returning 403")
+            return Response(json.dumps(err), content_type='application/json', charset='utf8', status=403)
+
+        if not CourseEnrollment.is_enrolled(self.get_django_user(), self.location.course_key):
+            err = {"error": "User is not enrolled"}
+            logger.warning("User %s is not enrolled in course; returnin 403", user)
+            return Response(json.dumps(err), content_type='application/json', charset='utf8', status=403)
+
         file_name = os.path.basename(suffix)
         signed_url = self.storage.url(suffix)
         if request.query_string:
