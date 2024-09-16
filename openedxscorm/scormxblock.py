@@ -283,7 +283,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         Response object containing the content of the requested file with the appropriate content type.
         """
         user = self.get_django_user()
-        if not user.authenticated:
+        if not user.is_authenticated:
             err = {"error": "User must be logged in"}
             logger.warning("User is not logged in; returning 403")
             return Response(json.dumps(err), content_type='application/json', charset='utf8', status=403)
