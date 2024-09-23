@@ -20,6 +20,7 @@ IBL Features
 
 * Allows author to specify an existing s3 path to serve s3 content as opposed to having to upload it each time
 * Adds model to fascillitate reporting and aggregation of scorm events
+
   * Overall SCO State it currently enabled; Interactions to come
 
 
