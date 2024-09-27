@@ -193,6 +193,18 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
 
     has_author_view = True
 
+    @classmethod
+    def get_template(cls, template_id):
+        """
+        Returns the template associated with this XBlock.
+        """
+        return {
+            "data": {},
+            "metadata": {
+                "display_name": _("SCORM"),
+            },
+        }
+
     def render_template(self, template_path, context):
         template_str = self.resource_string(template_path)
         template = Template(template_str)
