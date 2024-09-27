@@ -199,7 +199,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         return template.render(Context(context))
 
     def get_current_user_attr(self, attr: str):
-        return self.get_current_user().opt_attrs.get(attr)
+        return self.runtime.service(self, "user").get_current_user().opt_attrs.get(attr)
 
     def get_current_user(self):
         return self.runtime.service(self, "user").get_current_user()
@@ -212,7 +212,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     def initialize_student_info(self):
         user_id = self.get_current_user_attr("edx-platform.user_id")
         username = self.get_current_user_attr("edx-platform.username")
-        
+
         self.scorm_data["cmi.core.student_id"] = user_id
         self.scorm_data["cmi.learner_id"] = user_id
         self.scorm_data["cmi.learner_name"] = username
@@ -450,8 +450,8 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
                     # the is_dir() method to verify whether a ZipInfo object points to a
                     # directory.
                     # https://docs.python.org/3.6/library/zipfile.html#zipfile.ZipInfo.is_dir
-                    # TODO: remove backported 'is_dir' method once upgraded to 
-                    # python 3.12.3 or greater. 
+                    # TODO: remove backported 'is_dir' method once upgraded to
+                    # python 3.12.3 or greater.
                     if not is_dir(zipinfo):
                         dest_path = os.path.join(
                             self.extract_folder_path,
@@ -498,7 +498,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         Removes query string from a path
         """
         return path.split('?')[0] if path else path
-    
+
     def path_exists(self, path):
         """
         Returs True if given path exists in storage otherwise returns False
@@ -522,7 +522,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         sha1.update(str(self.scope_ids.usage_id).encode())
         hashed_usage_id = sha1.hexdigest()
         return os.path.join(self.scorm_location(), hashed_usage_id)
-    
+
     @property
     def extract_old_folder_base_path(self):
         """
@@ -563,7 +563,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
     @XBlock.json_handler
     def scorm_set_values(self, data_list, _suffix):
         # NOTE: we should be using updat_or_create_scorm_data but we're seeing issues
-        # with the way scorm data is coming back so we're unable to effectively use 
+        # with the way scorm data is coming back so we're unable to effectively use
         # it yet
         if can_record_analytics():
             user_id = self.get_current_user_attr("edx-platform.user_id")
@@ -1018,7 +1018,7 @@ def is_dir(zipinfo):
         # created on Windows can use backward slashes.  For compatibility
         # with the extraction code which already handles this:
         return True
-    return False 
+    return False
 
 
 class ScormError(Exception):
