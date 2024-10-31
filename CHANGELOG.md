@@ -1,4 +1,4 @@
-i# Changelog
+# Changelog
 
 This file includes a history of past releases. Changes that were not yet added to a release are in the [changelog.d/](./changelog.d) folder.
 
@@ -15,6 +15,11 @@ instructions, because git commits are used to generate release notes:
 -->
 
 <!-- scriv-insert-here -->
+
+<a id='changelog-1.0.2'></a>
+## v1.0.2 (2024-10-31)
+
+[Improvement] Return error to studio if parsing imsmanifest fails. (by @geoff-va)
 
 <a id='changelog-1.0.1'></a>
 ## v1.0.1 (2024-09-16)
