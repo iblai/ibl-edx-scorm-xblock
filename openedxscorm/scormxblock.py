@@ -679,35 +679,39 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
         except OSError as e:
             raise ScormError(e)
 
-        tree = ET.parse(imsmanifest_file)
-        imsmanifest_file.seek(0)
-        namespace = ""
-        for _, node in ET.iterparse(imsmanifest_file, events=["start-ns"]):
-            if node[0] == "":
-                namespace = node[1]
-                break
-        root = tree.getroot()
+        try:
+            tree = ET.parse(imsmanifest_file)
+            imsmanifest_file.seek(0)
+            namespace = ""
+            for _, node in ET.iterparse(imsmanifest_file, events=["start-ns"]):
+                if node[0] == "":
+                    namespace = node[1]
+                    break
+            root = tree.getroot()
 
-        prefix = "{" + namespace + "}" if namespace else ""
-        resource = root.find(
-            f"{prefix}resources/{prefix}resource[@href]"
-        )
-        schemaversion = root.find(
-            f"{prefix}metadata/{prefix}schemaversion"
-        )
+            prefix = "{" + namespace + "}" if namespace else ""
+            resource = root.find(
+                f"{prefix}resources/{prefix}resource[@href]"
+            )
+            schemaversion = root.find(
+                f"{prefix}metadata/{prefix}schemaversion"
+            )
 
-        self.extract_navigation_titles(root, prefix)
+            self.extract_navigation_titles(root, prefix)
 
-        if resource is not None:
-            self.index_page_path = resource.get("href")
-        else:
-            self.index_page_path = self.find_relative_file_path("index.html")
-        if (schemaversion is not None) and (
-            re.match("^1.2$", schemaversion.text) is None
-        ):
-            self.scorm_version = "SCORM_2004"
-        else:
-            self.scorm_version = "SCORM_12"
+            if resource is not None:
+                self.index_page_path = resource.get("href")
+            else:
+                self.index_page_path = self.find_relative_file_path("index.html")
+            if (schemaversion is not None) and (
+                re.match("^1.2$", schemaversion.text) is None
+            ):
+                self.scorm_version = "SCORM_2004"
+            else:
+                self.scorm_version = "SCORM_12"
+
+        except ET.ParseError as e:
+            raise ScormError(f"Error parsing imsmanifest: {e}")
 
     def extract_navigation_titles(self, root, prefix):
         """Extracts all the titles of items to build a navigation menu from the imsmanifest.xml file
