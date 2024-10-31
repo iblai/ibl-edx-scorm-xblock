@@ -711,7 +711,7 @@ class ScormXBlock(XBlock, CompletableXBlockMixin):
                 self.scorm_version = "SCORM_12"
 
         except ET.ParseError as e:
-            raise ScormError(e)
+            raise ScormError(f"Error parsing imsmanifest: {e}")
 
     def extract_navigation_titles(self, root, prefix):
         """Extracts all the titles of items to build a navigation menu from the imsmanifest.xml file
