@@ -16,6 +16,12 @@ instructions, because git commits are used to generate release notes:
 
 <!-- scriv-insert-here -->
 
+<a id='changelog-1.0.3'></a>
+## v1.0.3 (2024-11-04)
+
+[Bugfix] Only show navigation template in popup window if enabled
+[Improvement] Set margin to a fixed 25px so viewport doesn't constantly change when resizing
+
 <a id='changelog-1.0.2'></a>
 ## v1.0.2 (2024-10-31)
 
